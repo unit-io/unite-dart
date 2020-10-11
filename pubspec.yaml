@@ -1,0 +1,14 @@
+name: unite_messaging
+description: Lightweight and high performance publish-subscribe messaging system - dart client library.
+version: 0.1.0+1
+
+environment:
+  sdk: '>=2.7.0 <3.0.0'
+
+dependencies:
+  async: ^2.4.2
+  grpc: ^2.1.3
+  protobuf: ^1.0.1
+  meta: ^1.1.8
+
+dev_dependencies:

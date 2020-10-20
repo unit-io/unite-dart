@@ -1,6 +1,6 @@
 part of unite_messaging;
 
-class GrpcStream {
+class GrpcConnectionHandler {
   ClientChannel channel;
   UniteClient _serverConn;
 
@@ -12,11 +12,18 @@ class GrpcStream {
   /// that didn't fully fit into the target slice. See Read.
   int readOffset;
 
-  GrpcStream.newConnection(this.channel) {
+  Future<bool> newConnection(Uri uri, Duration timeout) {
+    var r = ConnectResult();
     this.readOffset = 0;
+    this.channel = ClientChannel(uri.host,
+        port: uri.port,
+        options:
+            const ChannelOptions(credentials: ChannelCredentials.insecure()));
     this._serverConn = UniteClient(this.channel);
     this.stream = _serverConn.stream(outPacket.stream);
     this.inPacket = StreamQueue<pbx.Packet>(this.stream);
+    r.completer.complete(null);
+    return r.completer.future;
   }
 
   /// InMsg is the type to use for reading request data from the streaming
@@ -26,6 +33,14 @@ class GrpcStream {
   /// The Reset method will be called on InMsg during Reads so data you
   /// set initially will be lost.
   final inMsg = ByteBuffer(typed.Uint8Buffer());
+
+  Future<bool> hasNext() {
+    return inPacket.hasNext;
+  }
+
+  Future<void> next() {
+    inPacket.next.then((inMsg) => this.inMsg.writeList(inMsg.data));
+  }
 
   /// read implements stream reader.
   Future<typed.Uint8Buffer> read(int length) async {
@@ -58,9 +73,10 @@ class GrpcStream {
   Future<int> write(ByteBuffer p) async {
     var total = p.length;
     do {
+      print('GrpcHandler::write data length $total');
       // Write our data into the request. Any error means we abort.
       final packet = pbx.Packet();
-      packet.data = p.readAll();
+      packet.data = p.read(p.length);
       outPacket.sink.add(packet);
 
       // We sent partial data so we continue writing the remainder
@@ -84,8 +100,11 @@ class GrpcStream {
   /// This calls CloseSend underneath for clients, so read the documentation
   /// for that to understand the semantics of this call.
   void close() {
-    inPacket.cancel();
-    outPacket.close();
-    channel.shutdown();
+    if (_serverConn != null) {
+      inPacket.cancel();
+      outPacket.close();
+      channel.shutdown();
+      _serverConn = null;
+    }
   }
 }

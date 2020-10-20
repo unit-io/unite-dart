@@ -38,7 +38,7 @@ abstract class Packet {
   Info getInfo();
 
   /// readPacket unpacks the packet from the provided stream.
-  static Future<Packet> readPacket(GrpcStream r) async {
+  static Future<Packet> readPacket(dynamic r) async {
     var fh = FixedHeader.internal();
     await fh.unpack(r);
 
@@ -134,7 +134,7 @@ class FixedHeader {
     return head;
   }
 
-  Future<void> unpack(GrpcStream r) async {
+  Future<void> unpack(dynamic r) async {
     final fhSize = await decodeLength(r);
 
     // read FixedHeader
@@ -159,7 +159,7 @@ class FixedHeader {
     return encLength;
   }
 
-  static Future<int> decodeLength(GrpcStream r) async {
+  static Future<int> decodeLength(dynamic r) async {
     int rLength = 0;
     int multiplier = 0;
     while (multiplier < 27) {

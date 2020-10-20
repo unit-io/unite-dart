@@ -1,6 +1,7 @@
 library unite_messaging;
 
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:async/async.dart';
 import 'package:grpc/grpc.dart';
@@ -26,13 +27,13 @@ part 'src/utility/unite_messaging_byte_buffer.dart';
 
 part 'src/unite_messaging_event_channel.dart';
 
+part 'src/unite_messaging_grpc_handler.dart';
+
 part 'src/unite_messaging_qos.dart';
 
-part 'src/unite_messaging_stream.dart';
+part 'src/unite_messaging_connection_handler.dart';
 
 part 'src/unite_messaging_connection.dart';
-
-part 'src/unite_messaging_connection_handler.dart';
 
 part 'src/unite_messaging_message_identifiers.dart';
 
@@ -41,6 +42,8 @@ part 'src/unite_messaging_message.dart';
 part 'src/unite_messaging_options.dart';
 
 part 'src/unite_messaging_result_notifier.dart';
+
+part 'src/unite_messaging_client.dart';
 
 part 'src/unite_messaging_topic_filter.dart';
 

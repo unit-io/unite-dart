@@ -107,7 +107,6 @@ class ByteBuffer {
 
   void reset() {
     _position = 0;
-    print("ByteBuffer: reset");
   }
 
   @override

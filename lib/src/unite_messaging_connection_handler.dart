@@ -1,13 +1,17 @@
 part of unite_messaging;
 
-class ClientConnectionHandler {
+class ConnectionHandler {
   Options opts;
   int contract;
   MessageIdentifiers messageIds; // local identifier of messages
   int connID; // Theunique id of the connection.
   Map<int, MessageHandler> callbacks;
-  ClientConnection conn;
-  GrpcStream serverConn;
+  Connection conn;
+
+  /// The Handler that is managing the connection to the remote server.
+  @protected
+  dynamic connectionHandler;
+  // ServerConnection serverConn;
 
   /// Time when the keepalive session was last refreshed
   DateTime lastTouched;
@@ -29,20 +33,20 @@ class ClientConnectionHandler {
 
   EventChannel<Message> get eventChannel => _eventChannel;
 
+  Future<bool> newConnection(Connection conn, Uri uri, Duration timeout) async {
+    this.conn = conn;
+    return connectionHandler.newConnection(uri, timeout);
+  }
+
   /// Connect takes a connected net.Conn and performs the initial handshake. Paramaters are:
   /// conn - Connected net.Conn
   /// cm - Connect Packet
-  Future<int> _connect(
-      ClientConnection conn, ClientChannel channel, Connect cm) async {
+  Future<int> _connect(Connect cm) async {
     try {
-      this.conn = conn;
-      this.serverConn = GrpcStream.newConnection(channel);
-
       var m = cm.encode();
-      await serverConn.write(m);
-      if (await serverConn.inPacket.hasNext) {
-        await serverConn.inPacket.next
-            .then((inMsg) => serverConn.inMsg.writeList(inMsg.data));
+      await connectionHandler.write(m);
+      if (await connectionHandler.hasNext()) {
+        await connectionHandler.next();
       }
     } on Exception catch (e) {
       rethrow;
@@ -55,7 +59,7 @@ class ClientConnectionHandler {
   /// This prevents receiving incoming data while resume
   /// is in progress if clean session is false.
   Future<int> verifyCONNACK() async {
-    Connack ca = await Packet.readPacket(serverConn);
+    Connack ca = await Packet.readPacket(connectionHandler);
     if (ca.connack.returnCode == ConnectReturnCode.Accepted.index) {
       connID = ca.connack.connID;
       messageIds.reset(connID);
@@ -69,11 +73,10 @@ class ClientConnectionHandler {
   Future<void> readLoop() async {
     // await for (var inMsg in serverConn.stream) {
     //   serverConn.inPacket.sink.add(inMsg);
-    while (await serverConn.inPacket.hasNext) {
-      await serverConn.inPacket.next
-          .then((inMsg) => serverConn.inMsg.writeList(inMsg.data));
-      var msg = await Packet.readPacket(serverConn);
-      serverConn.shrink();
+    while (await connectionHandler.hasNext()) {
+      await connectionHandler.next();
+      var msg = await Packet.readPacket(connectionHandler);
+      connectionHandler.shrink();
       handler(msg);
     }
   }
@@ -140,7 +143,7 @@ class ClientConnectionHandler {
           break;
       }
       var m = msg.p.encode();
-      serverConn.write(m);
+      connectionHandler.write(m);
     });
   }
 
@@ -181,7 +184,7 @@ class ClientConnectionHandler {
       if (lastAction.isAfter(live) && lastTouched.isBefore(timeout)) {
         var ping = Pingreq();
         var m = ping.encode();
-        serverConn.write(m);
+        connectionHandler.write(m);
         pingSent = conn.timeNow();
       }
       if (lastTouched.isBefore(timeout) && pingSent.isBefore(timeout)) {
@@ -193,7 +196,7 @@ class ClientConnectionHandler {
   }
 
   /// ack acknowledges a packet
-  Function() ack(ClientConnection c, Publish packet) {
+  Function() ack(Connection c, Publish packet) {
     return () {
       switch (Qos.values[packet.pub.qos]) {
         case Qos.exactlyOnce:

@@ -4,33 +4,8 @@ part of unite_messaging;
 /// MasterContract contract is default contract used for topics if client program does not specify Contract in the request
 const MasterContract = 3376684800;
 
-abstract class IClientConnection {
-  /// connect will create a connection to the server
-  void connect();
-
-  /// disconnect will end the connection with the server, but not before waiting
-  /// the client wait group is done.
-  void disconnect();
-
-  /// publish will publish a message with the specified QoS and content
-  /// to the specified topic.
-  Result publish(String topic, String payload,
-      {qos = Qos.atLeastOnce, retain = false});
-
-  /// subscribe starts a new subscription. Provide a MessageHandler to be executed when
-  /// a message is published on the topic provided, or nil for the default handler
-  Result subscribe(String topic, {qos = Qos.atLeastOnce});
-
-  /// unsubscribe will end the subscription from each of the topics provided.
-  /// Messages published to those topics from other clients will no longer be
-  /// received.
-  Result unsubscribe(List<String> topics);
-}
-
-class ClientConnection
-    with ClientConnectionHandler
-    implements IClientConnection {
-  ClientConnection(String target, String clientID, Options opts) {
+class Connection with ConnectionHandler {
+  Connection(String target, String clientID, Options opts) {
     // set default options
     this.opts = opts.withDefaultOptions();
     this.contract = MasterContract;
@@ -58,7 +33,7 @@ class ClientConnection
     await Future.wait(waitGroup);
 
     cancelTimer();
-    serverConn.close();
+    connectionHandler.close();
     send.close();
     pub.close();
   }
@@ -103,24 +78,20 @@ class ClientConnection
     int returnCode;
     for (var uri in opts.servers) {
       try {
-        var channel = ClientChannel(uri.host,
-            port: uri.port,
-            options: const ChannelOptions(
-                credentials: ChannelCredentials.insecure()));
-
+        await newConnection(this, uri, opts.connectTimeout);
         // get Connect message from options.
         var cm = Message.newConnectMsgFromOptions(opts, uri);
-        returnCode = await _connect(this, channel, cm);
+        returnCode = await _connect(cm);
         if (returnCode == ConnectReturnCode.Accepted.index) {
           break;
         }
       } on Exception catch (e) {
         final message =
-            'Connect: The connection to the unite server ${uri.host}:${uri.port} could not be made.';
+            'Connect: The connection to the unite messaging server ${uri.host}:${uri.port} could not be made.';
         throw NoConnectionException(message);
       }
-      if (serverConn.channel != null) {
-        serverConn.close();
+      if (connectionHandler != null) {
+        connectionHandler.close();
       }
     }
     return ConnectReturnCode.values[returnCode];

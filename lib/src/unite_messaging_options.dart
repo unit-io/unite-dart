@@ -3,14 +3,14 @@ part of unite_messaging;
 /// MessageHandler is a callback type which can be set to be
 /// executed upon the arrival of messages published to topics
 /// to which the client is subscribed.
-typedef MessageHandler = void Function(IClientConnection, Stream<Message>);
+typedef MessageHandler = void Function(Connection, Stream<Message>);
 
 /// OnConnectionHandler is a callback that is called when connection to the server is established.
-typedef OnConnectionHandler = Function(IClientConnection);
+typedef OnConnectionHandler = Function(Connection);
 
 /// ConnectionLostHandler is a callback that is set to be executed
 /// upon an uninteded disconnection from server.
-typedef ConnectionLostHandler = Function(IClientConnection);
+typedef ConnectionLostHandler = Function(Connection);
 
 class Options {
   Options();

@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "unite_messaging",
-            "program": "example/unite_messaging_simple.dart",
+            "program": "example/unite_messaging_example/lib/main.dart",
             "request": "launch",
             "type": "dart"
         }

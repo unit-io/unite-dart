@@ -2,15 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'package:unite_messaging/unite_messaging.dart';
 
-MessageHandler onMessage =
-    (IClientConnection client, Stream<Message> msgStream) {
+MessageHandler onMessage = (Connection client, Stream<Message> msgStream) {
   msgStream.listen((msg) {
     print("TOPIC: ${msg.topic}\n");
     print("MSG: ${msg.payload}\n");
   });
 };
 
-ConnectionLostHandler onConnectionLost = (IClientConnection client) {
+ConnectionLostHandler onConnectionLost = (Connection client) {
   print("Connection lost: \n");
   exit(-1);
 };
@@ -24,8 +23,10 @@ void main() async {
       // .withDefaultMessageHandler(onMessage)
       .withConnectionLostHandler(onConnectionLost);
 
-  var client = ClientConnection("127.0.0.1:6061",
+  var client = Client("127.0.0.1:6061",
       "UCBFDONCNJLaKMCAIeJBaOVfbAXUZHNPLDKKLDKLHZHKYIZLCDPQ", opts);
+
+  print('inside main');
 
   try {
     await client.connect();
@@ -33,6 +34,8 @@ void main() async {
     print("connection failed: ${e.toString()}");
     return;
   }
+
+  print('connection successful');
 
   var subResult =
       client.subscribe("AZQAMYFYXeEMa/teams.alpha.*", qos: Qos.atLeastOnce);
